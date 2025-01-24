@@ -7,15 +7,11 @@ def is_merge_commit(commit: Commit) -> bool:
     """
     Проверяет, является ли указанный коммит merge-коммитом.
 
-    Parameters
-    ----------
-    commit : Commit
-        Объект коммита из библиотеки `git`.
+    Args:
+        commit (Commit): Объект коммита из библиотеки `git`.
 
-    Returns
-    -------
-    bool
-        True, если коммит является merge-коммитом (имеет более одного родителя), иначе False.
+    Returns:
+        bool: True, если коммит является merge-коммитом (имеет более одного родителя), иначе False.
     """
     return len(commit.parents) > 1
 
@@ -24,15 +20,11 @@ def extract_target_branch_name(merge_commit_message: str) -> Optional[str]:
     """
     Извлекает имя целевой ветки из сообщения merge-коммита.
 
-    Parameters
-    ----------
-    merge_commit_message : str
-        Текст сообщения merge-коммита.
+    Args:
+        merge_commit_message (str): Текст сообщения merge-коммита.
 
-    Returns
-    -------
-    Optional[str]
-        Имя целевой ветки, если оно найдено, иначе None.
+    Returns:
+        Optional[str]: Имя целевой ветки, если оно найдено, иначе None.
     """
     pattern = r"^Merge branch .* into ([\w\-.\/]+)$"
     match = re.search(pattern, merge_commit_message)
@@ -43,15 +35,11 @@ def extract_source_branch_name(merge_commit_message: str) -> Optional[str]:
     """
     Извлекает имя исходной ветки из сообщения merge-коммита.
 
-    Parameters
-    ----------
-    merge_commit_message : str
-        Текст сообщения merge-коммита.
+    Args:
+        merge_commit_message (str): Текст сообщения merge-коммита.
 
-    Returns
-    -------
-    Optional[str]
-        Имя исходной ветки, если оно найдено, иначе None.
+    Returns:
+        Optional[str]: Имя исходной ветки, если оно найдено, иначе None.
     """
     pattern = r"^Merge branch '([\w\-.\/]+)' into"
     match = re.search(pattern, merge_commit_message)
@@ -62,17 +50,12 @@ def extract_issue_id(branch_name: str, project_id: str) -> Optional[str]:
     """
     Извлекает идентификатор задачи из имени ветки.
 
-    Parameters
-    ----------
-    branch_name : str
-        Имя ветки, из которой извлекается идентификатор задачи.
-    project_id : str
-        Префикс проекта (например, 'PROJECT'), используемый для идентификации задачи.
+    Args:
+        branch_name (str): Имя ветки, из которой извлекается идентификатор задачи.
+        project_id (str): Префикс проекта (например, 'PROJECT'), используемый для идентификации задачи.
 
-    Returns
-    -------
-    Optional[str]
-        Идентификатор задачи в формате '{project_id}-<число>', если он найден, иначе None.
+    Returns:
+        Optional[str]: Идентификатор задачи в формате '{project_id}-<число>', если он найден, иначе None.
     """
     pattern = rf"{project_id}-\d+"
     match = re.search(pattern, branch_name)
