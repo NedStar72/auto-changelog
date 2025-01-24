@@ -19,9 +19,10 @@ $(VENV)/bin/activate:
 help:
 	@echo "Доступные команды:"
 	@echo "  make venv       - Создать виртуальное окружение (если отсутствует)"
-	@echo "  make install    - Установить или обновить зависимости"
+	@echo "  make install    - Установить зависимости"
+	@echo "  make freeze     - Обновить requirements.txt
 	@echo "  make run        - Запустить main.py"
-	@echo "  make add <libs> - Установить зависимости и обновить requirements.txt"
+	@echo "  make test       - Запустить юнит-тесты"
 	@echo "  make clean      - Удалить виртуальное окружение и временные файлы"
 
 ## Создать виртуальное окружение (если отсутствует)
@@ -36,27 +37,20 @@ install: venv
 	)
 	@rm -f .installed.txt
 
+## Обновить requirements.txt
+freeze: install
+	@$(PIP) freeze > $(REQUIREMENTS); \
+	echo "Зависимости сохранены в $(REQUIREMENTS)."
+
 ## Запустить main.py
 run: install
 	@$(PYTHON) main.py
 
-## Добавить одну или несколько зависимостей и обновить requirements.txt
-add: install
-	@DEPENDENCIES=$(wordlist 2, $(words $(MAKECMDGOALS)), $(MAKECMDGOALS)); \
-	if [ -z "$$DEPENDENCIES" ]; then \
-		echo "Ошибка: Не указаны зависимости."; \
-		exit 1; \
-	fi; \
-	echo "Устанавливаем зависимости: $$DEPENDENCIES..."; \
-	$(PIP) install $$DEPENDENCIES; \
-	$(PIP) freeze > $(REQUIREMENTS); \
-	echo "Зависимости $$DEPENDENCIES добавлены в $(REQUIREMENTS)."
+## Запустить юнит-тесты
+test: install
+	@pytest -s src/
 
 ## Удалить виртуальное окружение и временные файлы
 clean:
 	rm -rf $(VENV) __pycache__ *.pyc *.pyo
 	@echo "Очистка завершена."
-
-## Паттерн для обработки всех других целей
-%:
-	@:
