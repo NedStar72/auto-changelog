@@ -3,7 +3,8 @@ from .git_helpers import (
     is_merge_commit,
     extract_target_branch_name,
     extract_source_branch_name,
-    extract_issue_id,
+    extract_issue_id_from_branch_name,
+    extract_issue_id_from_commit_message,
 )
 
 
@@ -13,7 +14,6 @@ class MockCommit:
         self.parents = parents
 
 
-# Тесты для is_merge_commit
 def test_is_merge_commit_with_merge():
     """Проверяет, что is_merge_commit возвращает True для merge-коммита."""
     merge_commit = MockCommit(parents=[object(), object()])  # Два родителя
@@ -32,7 +32,6 @@ def test_is_merge_commit_with_no_parents():
     assert is_merge_commit(no_parents_commit) is False
 
 
-# Тесты для extract_target_branch_name
 @pytest.mark.parametrize(
     "message, expected_branch",
     [
@@ -52,7 +51,6 @@ def test_extract_target_branch_name(message, expected_branch):
     assert extract_target_branch_name(message) == expected_branch
 
 
-# Тесты для extract_source_branch_name
 @pytest.mark.parametrize(
     "message, expected_branch",
     [
@@ -72,7 +70,6 @@ def test_extract_source_branch_name(message, expected_branch):
     assert extract_source_branch_name(message) == expected_branch
 
 
-# Тесты для extract_issue_id
 @pytest.mark.parametrize(
     "branch_name, project_id, expected_issue_id",
     [
@@ -85,6 +82,23 @@ def test_extract_source_branch_name(message, expected_branch):
         ("release/v1.0.0/bugfix/PROJ-123-fix-something", "PROJ", "PROJ-123"),
     ]
 )
-def test_extract_issue_id(branch_name, project_id, expected_issue_id):
+def test_extract_issue_id_from_branch_name(branch_name, project_id, expected_issue_id):
     """Проверяет, что извлечение ID задачи из имени ветки работает корректно."""
-    assert extract_issue_id(branch_name, project_id) == expected_issue_id
+    assert extract_issue_id_from_branch_name(branch_name, project_id) == expected_issue_id
+
+@pytest.mark.parametrize(
+    "commit_message, project_id, expected_issue_id",
+    [
+        ("", "PROJ", None),
+        ("message", "PROJ", None),
+        ("PROJ-123 message", "TEST", None),
+        ("PROJ-123", "PROJ", "PROJ-123"),
+        ("PROJ-123 message", "PROJ", "PROJ-123"),
+        ("message PROJ-123", "PROJ", "PROJ-123"),
+        ("PROJ-123 PROJ-1234", "PROJ", "PROJ-123"),
+        ("feat(auth) message #PROJ-123", "PROJ", "PROJ-123"),
+    ]
+)
+def test_extract_issue_id_from_commit_message(commit_message, project_id, expected_issue_id):
+    """Проверяет, что извлечение ID задачи из сообщения коммита работает корректно."""
+    assert extract_issue_id_from_commit_message(commit_message, project_id) == expected_issue_id

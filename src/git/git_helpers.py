@@ -46,7 +46,7 @@ def extract_source_branch_name(merge_commit_message: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def extract_issue_id(branch_name: str, project_id: str) -> Optional[str]:
+def extract_issue_id_from_branch_name(branch_name: str, project_id: str) -> Optional[str]:
     """
     Извлекает идентификатор задачи из имени ветки.
 
@@ -59,4 +59,19 @@ def extract_issue_id(branch_name: str, project_id: str) -> Optional[str]:
     """
     pattern = rf"{project_id}-\d+"
     match = re.search(pattern, branch_name)
+    return match.group(0) if match else None
+
+def extract_issue_id_from_commit_message(commit_message: str, project_id: str) -> Optional[str]:
+    """
+    Извлекает идентификатор задачи из сообщения.
+
+    Args:
+        commit_message (str): Сообщение коммита, из которого извлекается идентификатор задачи.
+        project_id (str): Префикс проекта (например, 'PROJECT'), используемый для идентификации задачи.
+
+    Returns:
+        Optional[str]: Идентификатор задачи в формате '{project_id}-<число>', если он найден, иначе None.
+    """
+    pattern = rf"{project_id}-\d+"
+    match = re.search(pattern, commit_message)
     return match.group(0) if match else None

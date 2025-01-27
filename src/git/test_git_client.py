@@ -47,7 +47,7 @@ def test_get_issue_id_list_between_parent_and_child_branches():
         commit_from = repo.commit("master").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = ["TEST-1"]
         assert issues == expected_issues
     finally:
@@ -111,7 +111,7 @@ def test_get_issue_id_list_between_ahead_parent_and_child_branches():
         commit_from = repo.commit("master").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = ["TEST-1"]
         assert issues == expected_issues
     finally:
@@ -178,7 +178,7 @@ def test_get_issue_id_list_after_merging_two_branches():
         commit_from = repo.commit("master").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = ["TEST-1", "TEST-2"]
         assert issues == expected_issues
     finally:
@@ -230,7 +230,7 @@ def test_get_issue_id_list_in_same_commit():
         commit_from = repo.commit("release/v1.1.0").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = []
         assert issues == expected_issues
     finally:
@@ -293,7 +293,7 @@ def test_get_issue_id_list_between_merge_commits_in_same_branch():
         commit_from = repo.tag("v1.1.0-last-build").commit.hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = ["TEST-2"]
         assert issues == expected_issues
     finally:
@@ -359,7 +359,7 @@ def test_get_issue_id_list_between_merge_commits_in_same_branch_reversed():
         commit_from = repo.tag("v1.1.0-last-build").commit.hexsha
         commit_to = repo.tag("outdated-commit").commit.hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = []
         assert issues == expected_issues
     finally:
@@ -421,7 +421,7 @@ def test_get_issue_id_list_with_nested_merge_commits():
         commit_from = repo.commit("master").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST")
         expected_issues = ["TEST-2", "TEST-1"]
         assert issues == expected_issues
     finally:
@@ -502,7 +502,7 @@ def test_get_issue_id_list_after_merge_external_branch():
         commit_from = repo.tag("v1.1.0-last-build").commit.hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST", target_branch="release/v1.1.0")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST", target_branch="release/v1.1.0")
         expected_issues = ["TEST-2"]
         assert issues == expected_issues
     finally:
@@ -564,8 +564,131 @@ def test_get_issue_id_list_with_nested_merge_commits_and_specified_target_branch
         commit_from = repo.commit("master").hexsha
         commit_to = repo.commit("release/v1.1.0").hexsha
 
-        issues = client.get_issue_id_list(commit_from, commit_to, project_id="TEST", target_branch="release/v1.1.0")
+        issues = client.get_issue_id_list_from_merge_commits(commit_from, commit_to, project_id="TEST", target_branch="release/v1.1.0")
         expected_issues = ["TEST-1"]
+        assert issues == expected_issues
+    finally:
+        # Удаляем репозиторий после теста
+        if os.path.exists(repo_dir):
+            shutil.rmtree(repo_dir)
+
+
+def test_get_issue_id_list_from_commit_messages_after_merging_two_branches():
+    """
+    Проверяем формирование списка задач после слияния двух дочерних веток в родительскую.
+    """
+
+    def create_test_repo(repo_dir: str):
+        # Удаляем старый репозиторий, если он существует
+        if os.path.exists(repo_dir):
+            shutil.rmtree(repo_dir)
+
+        repo = Repo.init(repo_dir)
+        repo.git.branch("-m", "main", "master") # Переименовываем ветку main в master
+        repo.index.commit("Initial commit") # Создаем коммит 'Initial commit'
+        repo.create_tag("v1.0.0") # Создаем тег 'v1.0.0'
+        repo.git.checkout("-b", "release/v1.1.0") # Создаем релизную ветку
+
+        # Создаем и работаем с фича-ветками
+        repo.git.checkout("-b", "feature/TEST-1")
+        repo.index.commit("TEST-1 message 1")
+        repo.git.checkout("release/v1.1.0")
+        repo.git.checkout("-b", "feature/TEST-2")
+        repo.index.commit("TEST-2 message 1")
+        repo.git.checkout("feature/TEST-1")
+        repo.index.commit("TEST-1 message 2")
+        repo.git.checkout("feature/TEST-2")
+        repo.index.commit("TEST-2 message 2")
+
+        # Сливаем фича-ветки в релиз
+        repo.git.checkout("release/v1.1.0")
+        repo.git.merge("feature/TEST-1", "--no-ff")
+        repo.git.merge("feature/TEST-2", "--no-ff")
+
+        return repo
+
+    # Визуализация графа репозитория:
+    #
+    # * (HEAD -> release/v1.1.0) Merge branch 'feature/TEST-2' into release/v1.1.0
+    # |\  
+    # * \ Merge branch 'feature/TEST-1' into release/v1.1.0
+    # |\ \  
+    # | | * (feature/TEST-2) TEST-2 message 2
+    # | * | (feature/TEST-1) TEST-1 message 2
+    # | | * TEST-2 message 1
+    # | |/  
+    # |/|   
+    # | * TEST-1 message 1
+    # |/  
+    # * (tag: v1.0.0, master) Initial commit
+
+    try:
+        # Создаем тестовый репозиторий
+        repo_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_repo")
+        repo = create_test_repo(repo_dir)
+        client = GitClient(repo_dir)
+
+        commit_from = repo.commit("master").hexsha
+        commit_to = repo.commit("release/v1.1.0").hexsha
+
+        issues = client.get_issue_id_list_from_commit_messages(commit_from, commit_to, project_id="TEST")
+        expected_issues = ["TEST-1", "TEST-2"]
+        assert issues == expected_issues
+    finally:
+        # Удаляем репозиторий после теста
+        if os.path.exists(repo_dir):
+            shutil.rmtree(repo_dir)
+
+
+def test_get_issue_id_list_from_commit_messages_after_fast_forward_merging_two_branches():
+    """
+    Проверяем формирование списка задач после слияния двух дочерних веток в родительскую.
+    """
+
+    def create_test_repo(repo_dir: str):
+        # Удаляем старый репозиторий, если он существует
+        if os.path.exists(repo_dir):
+            shutil.rmtree(repo_dir)
+
+        repo = Repo.init(repo_dir)
+        repo.git.branch("-m", "main", "master") # Переименовываем ветку main в master
+        repo.index.commit("Initial commit") # Создаем коммит 'Initial commit'
+        repo.create_tag("v1.0.0") # Создаем тег 'v1.0.0'
+        repo.git.checkout("-b", "release/v1.1.0") # Создаем релизную ветку
+
+        # Создаем и работаем с фича-ветками
+        repo.git.checkout("-b", "feature/TEST-1")
+        repo.index.commit("TEST-1 message 1")
+        repo.index.commit("TEST-1 message 2")
+        repo.git.checkout("release/v1.1.0")
+        repo.git.merge("feature/TEST-1", "--ff-only")
+        repo.git.checkout("-b", "feature/TEST-2")
+        repo.index.commit("TEST-2 message 1")
+        repo.index.commit("TEST-2 message 2")
+        repo.git.checkout("release/v1.1.0")
+        repo.git.merge("feature/TEST-2", "--ff-only")
+
+        return repo
+
+    # Визуализация графа репозитория:
+    #
+    # *  (HEAD -> release/v1.1.0, feature/TEST-2) TEST-2 message 2
+    # *  TEST-2 message 1
+    # *  (feature/TEST-1) TEST-1 message 2
+    # *  TEST-1 message 1
+    # *  (tag: v1.0.0, master) Initial commit
+
+    try:
+        # Создаем тестовый репозиторий
+        repo_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "test_repo")
+        repo = create_test_repo(repo_dir)
+        client = GitClient(repo_dir)
+
+        commit_from = repo.commit("master").hexsha
+        commit_to = repo.commit("release/v1.1.0").hexsha
+
+        issues = client.get_issue_id_list_from_commit_messages(commit_from, commit_to, project_id="TEST")
+        expected_issues = ["TEST-1", "TEST-2"]
         assert issues == expected_issues
     finally:
         # Удаляем репозиторий после теста
